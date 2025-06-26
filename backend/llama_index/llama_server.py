@@ -71,7 +71,7 @@ stemmer = PorterStemmer()
 
 def preprocess_ingredient(ingredient):
     """Remove stopwords and stem tokens."""
-    stopwords = {"green", "for", "with", "oil", "on", "in", "and"}
+    stopwords = {"green", "fresh", "for", "with", "on", "in", "and"}
     tokens = re.split(r'\W+', ingredient.lower())
     return [stemmer.stem(token) for token in tokens if token not in stopwords]
 
