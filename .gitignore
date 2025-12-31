@@ -10,3 +10,8 @@ env/
 
 # OS / editor
 .DS_Store
+
+# Secrets
+**/*.pem
+backend/config/*.js
+**/.env
