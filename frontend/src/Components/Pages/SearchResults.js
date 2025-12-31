@@ -1,68 +1,183 @@
-import React, { useContext, useState, useEffect } from 'react';
+// src/Pages/SearchResults.js
+import React, { useContext, useState } from 'react';
 import { ShopContext } from '../Context/ShopContext';
-import './css/SearchResults.css'
+import './css/SearchResults.css';
+
+const SectionTitle = ({ children }) => (
+  <div className="section-title">
+    <span>{children}</span>
+  </div>
+);
 
 const SearchResults = () => {
-  const { fetchMatchedProducts, searchResults, addToCart, products } = useContext(ShopContext);
+  const {
+    fetchMatchedProductsPhased,
+    krogerResults,
+    walmartResults,
+    unmatchedTerms,
+    loadingSearch,
+    searchPhase,
+    error,
+    addToKrogerCart,
+    getInCartQty,
+  } = useContext(ShopContext);
+
   const [query, setQuery] = useState('');
-  const [matchedProducts, setMatchedProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [zip, setZip] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+  const [pendingUpc, setPendingUpc] = useState(null);
 
-  const fetchAndMatchProducts = async () => {
-    setLoading(true);
-    try {
-      const matched = products.filter(product =>
-        searchResults.includes(product.title)
-      );
-      console.log('Matched products:', matched);
-      setMatchedProducts(matched);
-    } catch (error) {
-      console.error('Error fetching and matching products:', error.message);
-    } finally {
-      setLoading(false);
-    }
+  const onSearch = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setHasSearched(true);
+    await fetchMatchedProductsPhased(query.trim(), zip.trim() || undefined);
   };
 
-  useEffect(() => {
-    if (searchResults.length > 0) {
-      fetchAndMatchProducts();
-    }// eslint-disable-next-line
-  }, [searchResults]);
+  const phaseText =
+    searchPhase === 'finding'  ? 'Finding ingredients...' :
+    searchPhase === 'fetching' ? 'Fetching products...' :
+    searchPhase === 'matching' ? 'Matching products...' :
+    'Working...';
 
-  const handleSearch = () => {
-    fetchMatchedProducts(query);
+  const inc = async (upc) => {
+    try { setPendingUpc(upc); await addToKrogerCart(upc, 1); }
+    finally { setPendingUpc(null); }
   };
 
-  if (loading) {
-    return <div>Loading search results...</div>;
-  }
-
-  console.log('Search Results: ', searchResults);
+  const dec = async (upc) => {
+    if (getInCartQty(upc) <= 0) return;
+    try { setPendingUpc(upc); await addToKrogerCart(upc, -1); }
+    finally { setPendingUpc(null); }
+  };
 
   return (
-    <div className="search-results">
-      <div className="search-bar">
+    <div className="search-results" aria-busy={loadingSearch}>
+      <form className="search-bar" onSubmit={onSearch}>
         <input
           type="text"
+          placeholder="Search dish or ingredient..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search for a dish..."
+          disabled={loadingSearch}
+          aria-label="Search"
         />
-        <button onClick={handleSearch}>Search</button>
-      </div>
-      {(!matchedProducts || matchedProducts.length === 0) ? (
-        <p>No products found for the search query.</p>
-      ) : (
-        <div className="products">
-          {matchedProducts.map((product) => (
-            <div key={product._id} className="product-card">
-              <img src={product.imageUrl} alt={product.title} />
-              <h3>{product.title}</h3>
-              <p className="product-price">Price: ${product.price.toFixed(2)}</p>
-              <button onClick={() => addToCart(product._id)}>Add to Cart</button>
-            </div>
-          ))}
+        <input
+          type="text"
+          placeholder="ZIP (optional)"
+          value={zip}
+          onChange={(e) => setZip(e.target.value)}
+          disabled={loadingSearch}
+          aria-label="ZIP"
+        />
+        <button type="submit" disabled={loadingSearch}>Search</button>
+      </form>
+
+      {error && <div className="error">{error}</div>}
+
+      {loadingSearch ? (
+        <div className="loader-wrap" role="status" aria-live="polite">
+          <div className="loader" />
+          <div className="loader-text">{phaseText}</div>
         </div>
+      ) : (
+        <>
+          {hasSearched && krogerResults.length === 0 && walmartResults.length === 0 && (
+            <div className="empty-hint">No matching products found.</div>
+          )}
+
+          {krogerResults.length > 0 && (
+            <>
+              <SectionTitle>Kroger products</SectionTitle>
+              <div className="products">
+                {krogerResults.map((p) => {
+                  const qty = getInCartQty(p.upc);
+                  const busy = pendingUpc === p.upc;
+
+                  return (
+                    <div className="product-card" key={p._id}>
+                      <img src={p.imageUrl} alt={p.title} />
+                      <h3>{p.title}</h3>
+
+                      <div className="card-footer">
+                        <span className="product-price">
+                          ${(p.price ?? 0).toFixed(2)}
+                        </span>
+
+                        {qty > 0 ? (
+                          <div className="qty-controls" aria-label="Quantity controls">
+                            <button
+                              type="button"
+                              className="qty-btn"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); dec(p.upc); }}
+                              disabled={busy || qty <= 0}
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </button>
+
+                            <span className="qty-count" aria-live="polite" aria-atomic="true">
+                              {qty}
+                            </span>
+
+                            <button
+                              type="button"
+                              className="qty-btn"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); inc(p.upc); }}
+                              disabled={busy}
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="add-cta"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); inc(p.upc); }}
+                            disabled={busy}
+                          >
+                            Add to Kroger Cart
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {walmartResults.length > 0 && (
+            <>
+              <SectionTitle>
+                Walmart products {unmatchedTerms.length > 0 && (
+                  <em className="muted"> (for unmatched: {unmatchedTerms.join(', ')})</em>
+                )}
+              </SectionTitle>
+
+              <div className="products">
+                {walmartResults.map((p) => (
+                  <a
+                    className="product-card product-card--link"
+                    key={p._id}
+                    href={p.url || '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Opens Walmart product page"
+                  >
+                    <img src={p.imageUrl} alt={p.title} />
+                    <h3>{p.title}</h3>
+                    <div className="card-footer">
+                      <span className="product-price">${(p.price ?? 0).toFixed(2)}</span>
+                      <span className="retailer-badge">View at Walmart ↗</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );

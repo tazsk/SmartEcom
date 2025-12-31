@@ -21,8 +21,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to={`/${tab}`} />} />
           <Route path='/grocery' element={<ShopCategory category="grocery"/>}/>
-          <Route path='/snacks' element={<ShopCategory category="snacks"/>}/>
-          <Route path='/personal' element={<ShopCategory category="personal"/>}/>
+          <Route path='/meat' element={<ShopCategory category="meat"/>}/>
+          <Route path='/dairy' element={<ShopCategory category="dairy"/>}/>
           <Route path='/household' element={<ShopCategory category="household"/>}/>
           <Route path='/search' element={<SearchResults />} />
           <Route path='/orders' element={<Orders/>}/>

@@ -1,0 +1,411 @@
+cuisine,dish
+Chinese,Mapo tofu
+Chinese,Kung Pao chicken
+Chinese,Xiaolongbao
+Chinese,Peking duck
+Chinese,Beef chow fun
+Chinese,Hot and sour soup
+Chinese,Dan dan noodles
+Chinese,Twice-cooked pork
+Chinese,Scallion pancakes
+Chinese,Sweet and sour pork
+Japanese,Tonkotsu ramen
+Japanese,Okonomiyaki
+Japanese,Katsudon
+Japanese,Sukiyaki
+Japanese,Yakitori
+Japanese,Tempura udon
+Japanese,Chicken katsu curry
+Japanese,Unagi don
+Japanese,Miso soup
+Japanese,Takoyaki
+Korean,Bibimbap
+Korean,Kimchi jjigae
+Korean,Bulgogi
+Korean,Tteokbokki
+Korean,Samgyeopsal
+Korean,Japchae
+Korean,Sundubu jjigae
+Korean,Galbi
+Korean,Kimchi fried rice
+Korean,Jajangmyeon
+Indian,Hyderabadi chicken biryani
+Indian,Masala dosa
+Indian,Chole bhature
+Indian,Butter chicken
+Indian,Rogan josh
+Indian,Palak paneer
+Indian,Aloo paratha
+Indian,Pani puri
+Indian,Idli sambar
+Indian,Gulab jamun
+Australian,Meat pie
+Australian,Chicken parmigiana
+Australian,Lamingtons
+Australian,Pavlova
+Australian,Barramundi with lemon butter
+Australian,Aussie burger with beetroot
+Australian,Sausage sizzle
+Australian,Pumpkin soup
+Australian,Balmain bug with garlic butter
+Australian,Damper bread
+British,Fish and chips
+British,Shepherd’s pie
+British,Beef Wellington
+British,Full English breakfast
+British,Chicken tikka masala
+British,Yorkshire pudding
+British,Bangers and mash
+British,Cornish pasty
+British,Sticky toffee pudding
+British,Scotch egg
+Spanish,Paella Valenciana
+Spanish,Tortilla española
+Spanish,Gazpacho
+Spanish,Pulpo a la gallega
+Spanish,Cochinillo asado
+Spanish,Patatas bravas
+Spanish,Fabada asturiana
+Spanish,Salmorejo
+Spanish,Croquetas de jamón
+Spanish,Churros con chocolate
+Italian,Pizza Margherita
+Italian,Spaghetti alla carbonara
+Italian,Ragù alla bolognese
+Italian,Risotto alla milanese
+Italian,Lasagne alla bolognese
+Italian,Osso buco
+Italian,Trofie al pesto
+Italian,Saltimbocca alla romana
+Italian,Gnocchi alla sorrentina
+Italian,Tiramisu
+American (USA),Cheeseburger
+American (USA),Buffalo wings
+American (USA),New England clam chowder
+American (USA),Jambalaya
+American (USA),Chicago deep-dish pizza
+American (USA),Kansas City BBQ ribs
+American (USA),Philly cheesesteak
+American (USA),Lobster roll
+American (USA),Texas chili
+American (USA),Apple pie
+Brazilian,Feijoada
+Brazilian,Moqueca capixaba
+Brazilian,Pão de queijo
+Brazilian,Coxinha
+Brazilian,Brigadeiro
+Brazilian,Acarajé
+Brazilian,Picanha na brasa
+Brazilian,Vatapá
+Brazilian,Pastel de feira
+Brazilian,Farofa de manteiga
+Turkish,İskender kebap
+Turkish,Lahmacun
+Turkish,Mantı
+Turkish,Menemen
+Turkish,İmam bayıldı
+Turkish,Simit
+Turkish,Künefe
+Turkish,Adana kebap
+Turkish,Pide with sucuk
+Turkish,Mercimek çorbası
+Mexican,Tacos al pastor
+Mexican,Mole poblano
+Mexican,Chiles en nogada
+Mexican,Pozole rojo
+Mexican,Cochinita pibil
+Mexican,Enchiladas verdes
+Mexican,Tamales de pollo
+Mexican,Quesadillas de huitlacoche
+Mexican,Chilaquiles rojos
+Mexican,Elote callejero
+Thai,Pad Thai
+Thai,Tom yum goong
+Thai,Green curry chicken
+Thai,Massaman curry
+Thai,Som tam
+Thai,Pad kra pao
+Thai,Khao soi
+Thai,Panang curry
+Thai,Mango sticky rice
+Thai,Tom kha gai
+Vietnamese,Phở bò
+Vietnamese,Bánh mì thịt
+Vietnamese,Bún chả
+Vietnamese,Gỏi cuốn
+Vietnamese,Cơm tấm
+Vietnamese,Bánh xèo
+Vietnamese,Bún bò Huế
+Vietnamese,Cá kho tộ
+Vietnamese,Gà kho gừng
+Vietnamese,Chè ba màu
+Indonesian,Nasi goreng
+Indonesian,Rendang sapi
+Indonesian,Sate ayam
+Indonesian,Gado-gado
+Indonesian,Soto ayam
+Indonesian,Nasi padang
+Indonesian,Bakso
+Indonesian,Ayam goreng kalasan
+Indonesian,Mie goreng
+Indonesian,Pepes ikan
+Malaysian,Nasi lemak
+Malaysian,Char kway teow
+Malaysian,Laksa lemak
+Malaysian,Beef rendang
+Malaysian,Hainanese chicken rice
+Malaysian,Roti canai with dhal
+Malaysian,Satay Kajang
+Malaysian,Mee goreng mamak
+Malaysian,Asam laksa Penang
+Malaysian,Kaya toast
+Filipino,Chicken adobo
+Filipino,Sinigang na baboy
+Filipino,Lechon kawali
+Filipino,Kare-kare
+Filipino,Pancit bihon
+Filipino,Chicken inasal
+Filipino,Bistek Tagalog
+Filipino,Lumpiang shanghai
+Filipino,Arroz caldo
+Filipino,Halo-halo
+Singaporean,Hainanese chicken rice
+Singaporean,Chili crab
+Singaporean,Laksa Katong
+Singaporean,Hokkien mee
+Singaporean,Char kway teow (Singapore)
+Singaporean,Bak kut teh
+Singaporean,Satay with peanut sauce
+Singaporean,Roti prata with curry
+Singaporean,Kaya toast set
+Singaporean,Carrot cake (chai tow kway)
+Lebanese,Hummus with meat
+Lebanese,Kibbeh nayyeh
+Lebanese,Tabbouleh
+Lebanese,Fattoush
+Lebanese,Shish taouk
+Lebanese,Kafta kebab
+Lebanese,Manakish za’atar
+Lebanese,Warak enab
+Lebanese,Mujadara
+Lebanese,Ma’amoul
+Iranian (Persian),Chelo kebab koobideh
+Iranian (Persian),Ghormeh sabzi
+Iranian (Persian),Fesenjan
+Iranian (Persian),Zereshk polo ba morgh
+Iranian (Persian),Tahchin
+Iranian (Persian),Ash reshteh
+Iranian (Persian),Dizi (abgoosht)
+Iranian (Persian),Baghali polo
+Iranian (Persian),Khoresht bademjan
+Iranian (Persian),Jujeh kebab
+Egyptian,Koshari
+Egyptian,Ful medames
+Egyptian,Molokhia with chicken
+Egyptian,Mahshi
+Egyptian,Hawawshi
+Egyptian,Fatta
+Egyptian,Taameya
+Egyptian,Sayadiyah fish
+Egyptian,Shorbat ads
+Egyptian,Om Ali
+Moroccan,Chicken tagine with preserved lemon
+Moroccan,Lamb tagine with prunes
+Moroccan,Couscous tfaya
+Moroccan,Harira
+Moroccan,Pastilla
+Moroccan,Zaalouk
+Moroccan,Kefta kebabs
+Moroccan,Mechoui lamb
+Moroccan,Rfissa
+Moroccan,Chebakia
+Ethiopian,Doro wat
+Ethiopian,Misir wat
+Ethiopian,Shiro
+Ethiopian,Tibs
+Ethiopian,Kitfo
+Ethiopian,Atakilt wat
+Ethiopian,Gomen
+Ethiopian,Azifa
+Ethiopian,Firfir
+Ethiopian,Genfo
+Nigerian,Jollof rice
+Nigerian,Egusi soup
+Nigerian,Suya
+Nigerian,Puff-puff
+Nigerian,Akara
+Nigerian,Moi moi
+Nigerian,Ofada stew
+Nigerian,Efo riro
+Nigerian,Boli with groundnut
+Nigerian,Goat pepper soup
+South African,Bobotie
+South African,Biltong salad
+South African,Bunny chow
+South African,Boerewors roll (braai)
+South African,Cape Malay curry
+South African,Vetkoek with mince
+South African,Potjiekos
+South African,Sosaties
+South African,Malva pudding
+South African,Koeksisters
+Greek,Moussaka
+Greek,Souvlaki
+Greek,Spanakopita
+Greek,Pastitsio
+Greek,Greek salad (horiatiki)
+Greek,Stifado
+Greek,Gemista
+Greek,Fasolada
+Greek,Baklava
+Greek,Loukoumades
+French,Boeuf bourguignon
+French,Coq au vin
+French,Ratatouille
+French,Duck confit
+French,Bouillabaisse
+French,Steak frites
+French,Quiche Lorraine
+French,Croque monsieur
+French,Crème brûlée
+French,Tarte Tatin
+German,Bratwurst with sauerkraut
+German,Schnitzel (Wiener Art)
+German,Sauerbraten
+German,Currywurst
+German,Käsespätzle
+German,Schweinshaxe
+German,Rinderroulade
+German,Königsberger Klopse
+German,Kartoffelsalat
+German,Black Forest cake
+Austrian,Wiener Schnitzel
+Austrian,Tafelspitz
+Austrian,Kaiserschmarrn
+Austrian,Sachertorte
+Austrian,Austrian gulasch
+Austrian,Backhendl
+Austrian,Kasnocken
+Austrian,Apfelstrudel
+Austrian,Marillenknödel
+Austrian,Frittatensuppe
+Swiss,Cheese fondue
+Swiss,Raclette
+Swiss,Rösti with fried egg
+Swiss,Zürcher Geschnetzeltes
+Swiss,Basler Läckerli
+Swiss,Älplermagronen
+Swiss,Birchermüesli
+Swiss,Papet vaudois
+Swiss,Nusstorte
+Swiss,Bündner Gerstensuppe
+Belgian,Moules-frites
+Belgian,Carbonnade flamande
+Belgian,Waterzooi
+Belgian,Stoofvlees
+Belgian,Boulets Liégeois
+Belgian,Liège waffles
+Belgian,Speculoos cheesecake
+Belgian,Filet américain
+Belgian,Stoemp with sausage
+Belgian,Chocolate pralines
+Dutch,Bitterballen
+Dutch,Stamppot boerenkool
+Dutch,Erwtensoep
+Dutch,Haring broodje
+Dutch,Kibbeling
+Dutch,Poffertjes
+Dutch,Patat oorlog
+Dutch,Hutspot
+Dutch,Appeltaart
+Dutch,Bossche bol
+Polish,Pierogi ruskie
+Polish,Bigos
+Polish,Żurek
+Polish,Gołąbki
+Polish,Placki ziemniaczane
+Polish,Barszcz czerwony
+Polish,Kotlet schabowy
+Polish,Kiełbasa with sauerkraut
+Polish,Sernik
+Polish,Makowiec
+Hungarian,Gulyásleves
+Hungarian,Chicken paprikash
+Hungarian,Lángos
+Hungarian,Hortobágyi palacsinta
+Hungarian,Halászlé
+Hungarian,Töltött káposzta
+Hungarian,Pörkölt
+Hungarian,Somlói galuska
+Hungarian,Dobos torte
+Hungarian,Kürtőskalács
+Portuguese,Bacalhau à Brás
+Portuguese,Caldo verde
+Portuguese,Frango piri-piri
+Portuguese,Bifana
+Portuguese,Arroz de pato
+Portuguese,Polvo à lagareiro
+Portuguese,Francesinha
+Portuguese,Pastéis de nata
+Portuguese,Ameijoas à Bulhão Pato
+Portuguese,Feijoada transmontana
+Czech,Svíčková na smetaně
+Czech,Vepřo knedlo zelo
+Czech,Czech guláš
+Czech,Bramboráky
+Czech,Kulajda
+Czech,Řízek with potato salad
+Czech,Tatarák
+Czech,Moravský vrabec
+Czech,Trdelník
+Czech,Koprová omáčka
+Romanian,Sarmale
+Romanian,Mici (mititei)
+Romanian,Ciorbă de burtă
+Romanian,Mămăligă cu brânză
+Romanian,Papanași
+Romanian,Ciorbă de fasole cu afumătură
+Romanian,Drob de miel
+Romanian,Salată de boeuf
+Romanian,Tochitură moldovenească
+Romanian,Zacuscă
+Russian,Borscht
+Russian,Beef Stroganoff
+Russian,Pelmeni
+Russian,Blini with caviar
+Russian,Shchi
+Russian,Pirozhki
+Russian,Olivier salad
+Russian,Golubtsy
+Russian,Syrniki
+Russian,Medovik
+Ukrainian,Salo with rye bread
+Ukrainian,Varenyky
+Ukrainian,Chicken Kyiv
+Ukrainian,Holubtsi
+Ukrainian,Deruny
+Ukrainian,Borshch with pampushky
+Ukrainian,Nalisnyky
+Ukrainian,Uzvar
+Ukrainian,Kyiv cake
+Ukrainian,Banosh
+Georgian,Khachapuri Adjaruli
+Georgian,Khinkali
+Georgian,Shkmeruli
+Georgian,Chakhokhbili
+Georgian,Lobio
+Georgian,Pkhali
+Georgian,Chashushuli
+Georgian,Badrijani nigvzit
+Georgian,Churchkhela
+Georgian,Ojakhuri
+Armenian,Khorovats
+Armenian,Harissa
+Armenian,Ghapama
+Armenian,Eetch
+Armenian,Kyufta
+Armenian,Dolma (Armenian)
+Armenian,Spas soup
+Armenian,Manti (Armenian)
+Armenian,Gata
+Armenian,Basturma and eggs

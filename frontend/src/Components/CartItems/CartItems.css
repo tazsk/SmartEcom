@@ -1,88 +1,158 @@
 .cartitems {
-    margin: 100px;
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 0 16px;
 }
 
 .cartitems hr {
-    height: 3px;
-    background: #e2e2e2;
-    border: 0;
+  height: 2px;
+  background: #e7e9ee;
+  border: 0;
+  margin: 16px 0;
 }
 
 .cartitems-format-main {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
-    align-items: center;
-    gap: 75px;
-    padding: 20px;
+  display: grid;
+  grid-template-columns: 80px 2fr 1fr 1fr 1fr 32px;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
 }
 
 .image {
-    height: 100px;
-    width: 100px;
+  height: 80px;
+  width: 80px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #eceff3;
+  background: #fff;
 }
 
 .div_quantity {
-    display: flex;
-    align-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.minus_btn {
-    height: 25px;
-    width: 25px;
+.minus_btn,
+.plus_btn {
+  height: 28px;
+  width: 28px;
+  border-radius: 8px;
+  border: 1px solid #dfe3ea;
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
 }
 
 .quantity {
-    height: 25px;
-    width: 35px;
-    border: 2px solid #ebebeb;
-    background: #fff;
-    text-align: center;
-}
-
-.plus_btn {
-    height: 25px;
-    width: 25px;
+  height: 28px;
+  width: 44px;
+  border: 2px solid #ebebeb;
+  background: #fff;
+  text-align: center;
+  border-radius: 8px;
 }
 
 .remove {
-    all: unset;
-    cursor: pointer;
+  all: unset;
+  cursor: pointer;
+  color: #ef4444;
+  font-weight: 800;
 }
 
 .subtotal_delivery_total {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 0;
+  border-top: 1px dashed #e7e9ee;
+  margin-top: 12px;
 }
 
+.checkout-btn {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.02s ease;
+}
+
+.checkout-btn:hover {
+  opacity: 0.92;
+}
+
+.checkout-btn:active {
+  transform: translateY(1px);
+}
+
+/* Modal */
 .modal {
-    background: white;
-    padding: 20px;
-    width: 50%;
-    margin: auto;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  }
-  
-  .overlay {
-    background: rgba(0, 0, 0, 0.5);
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-  }
-  
-  .modal-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-  
-  .modal-image {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    margin-right: 10px;
-  }
-  
+  background: #fff;
+  width: min(760px, 92vw);
+  margin: 0;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(16, 24, 40, 0.18);
+  position: relative;
+  z-index: 101;
+
+  /* Constrain to viewport and allow inner scrolling */
+  max-height: calc(100vh - 16vh); /* 8vh top + 8vh bottom padding from overlay */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* header stays fixed; body scrolls */
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.48);
+
+  /* Center modal and allow scrolling if content is tall */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 8vh 16px; /* vertical gap from top/bottom */
+}
+
+/* Optional: keep "Checkout" header visible while body scrolls */
+.modal > h2 {
+  margin: 0 0 12px 0;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  padding-bottom: 8px;
+  z-index: 1;
+}
+
+/* The scrollable area for the long list */
+.modal-body {
+  overflow: auto;
+  max-height: 100%;
+  padding-right: 6px; /* room for scrollbar without shifting content */
+}
+
+.modal-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 10px;
+}
+
+.modal-image {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #eceff3;
+  background: #fff;
+}

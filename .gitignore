@@ -1,0 +1,12 @@
+# Python virtual envs
+.venv/
+myenv/
+venv/
+ENV/
+env/
+
+# Node deps (anywhere in repo)
+**/node_modules/
+
+# OS / editor
+.DS_Store

@@ -13,8 +13,8 @@ const Navbar = () => {
       </div>
       <ul className="nav_menu">
         <li onClick={() => { setTab("grocery") }}><Link style={{ textDecoration: 'none' }} to='/grocery'>Grocery</Link> {tab === "grocery" ? <hr /> : <></>}</li>
-        <li onClick={() => { setTab("snacks") }}><Link style={{ textDecoration: 'none' }} to='/snacks'>Snacks & Drinks</Link> {tab === "snacks" ? <hr /> : <></>}</li>
-        <li onClick={() => { setTab("personal") }}><Link style={{ textDecoration: 'none' }} to='/personal'>Personal Care</Link> {tab === "personal" ? <hr /> : <></>}</li>
+        <li onClick={() => { setTab("meat") }}><Link style={{ textDecoration: 'none' }} to='/meat'>Meat & Fish</Link> {tab === "meat" ? <hr /> : <></>}</li>
+        <li onClick={() => { setTab("dairy") }}><Link style={{ textDecoration: 'none' }} to='/dairy'>Dairy & Sweets</Link> {tab === "dairy" ? <hr /> : <></>}</li>
         <li onClick={() => { setTab("household") }}><Link style={{ textDecoration: 'none' }} to='/household'>Household Essentials</Link> {tab === "household" ? <hr /> : <></>}</li>
         <li onClick={() => { setTab("orders") }}><Link style={{ textDecoration: 'none' }} to='/orders'>Orders</Link> {tab === "orders" ? <hr /> : <></>}</li>
         <li onClick={() => { setTab("search") }}><Link to="/search">🔍</Link></li>

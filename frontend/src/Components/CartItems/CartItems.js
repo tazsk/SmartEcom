@@ -83,23 +83,23 @@ const CartItems = () => {
         overlayClassName="overlay"
         >
         <h2>Checkout</h2>
-        <div>
-          {Object.entries(cart).map(([productId, quantity]) => {
-            const product = products.find((p) => p._id === productId);
-            return (
-              <div key={productId} className="modal-item">
-                <img className="modal-image" src={product.imageUrl} alt={product.title} />
-                <p>{product.title}</p><hr/>
-                <p>Quantity: {quantity}</p><hr/>
-                <p>Total: ${product.price * quantity}</p>
-              </div>
-            );
-          })}
-          <hr />
-          <p>Subtotal: ${roundToTwoDecimals(totalCartValue)}</p>
-          <p>Delivery Fee: ${deliveryFee}</p>
-          <h3>Total: ${roundToTwoDecimals(totalCartValue + deliveryFee)}</h3>
-        </div>
+        <div className="modal-body">
+           {Object.entries(cart).map(([productId, quantity]) => {
+             const product = products.find((p) => p._id === productId);
+             return (
+               <div key={productId} className="modal-item">
+                 <img className="modal-image" src={product.imageUrl} alt={product.title} />
+                 <p>{product.title}</p><hr/>
+                 <p>Quantity: {quantity}</p><hr/>
+                 <p>Total: ${product.price * quantity}</p>
+               </div>
+             );
+           })}
+           <hr />
+           <p>Subtotal: ${roundToTwoDecimals(totalCartValue)}</p>
+           <p>Delivery Fee: ${deliveryFee}</p>
+           <h3>Total: ${roundToTwoDecimals(totalCartValue + deliveryFee)}</h3>
+         </div>
         Are you sure you want to place the above order?<br/>
         <button onClick={() => handlePlaceOrder()}>Place Order</button>
         <button onClick={() => setShowModal(false)}>Cancel</button>
