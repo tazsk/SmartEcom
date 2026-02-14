@@ -1,25 +1,34 @@
-import express from 'express';
-import protect from '../middleware/AuthMiddleware.js';
-import { krogerSearch, krogerSearchStream, krogerTestEval } from '../controllers/KrogerController.js';
+// backend/routes/KrogerRoutes.js
+import express from "express";
+import multer from "multer";
+import { authMiddleware, optionalAuthMiddleware } from "../middleware/AuthMiddleware.js";
 import {
-  krogerLogin,
-  krogerCallback,
-  addToKrogerCart,
-  getKrogerCartSnapshot,
-} from '../controllers/KrogerOAuthController.js';
+  krogerSearch,
+  krogerSearchStream,
+  krogerCartAddStream,
+  krogerFridgeUpload, // ✅ NEW
+  krogerTestEval,
+} from "../controllers/KrogerController.js";
 
 const router = express.Router();
 
-router.post('/search', krogerSearch);
-router.post('/test-eval', krogerTestEval);
-router.get('/search/stream', krogerSearchStream);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 }, // 6MB
+});
 
-// OAuth (UNPROTECTED — browser navigations won’t include your API token)
-router.get('/oauth/login', krogerLogin);
-router.get('/oauth/callback', krogerCallback);
+// JSON
+router.post("/search", authMiddleware, krogerSearch);
 
-// Cart (PROTECTED — called from your app with API auth)
-router.post('/cart/add', protect, addToKrogerCart);
-router.get('/cart/snapshot', protect, getKrogerCartSnapshot);
+// SSE search stream
+router.get("/search/stream", optionalAuthMiddleware, krogerSearchStream);
+
+// SSE add-to-cart stream
+router.get("/cart/add/stream", optionalAuthMiddleware, krogerCartAddStream);
+
+// ✅ NEW: fridge photo upload (requires auth)
+router.post("/fridge/upload", authMiddleware, upload.single("image"), krogerFridgeUpload);
+
+router.get("/test/eval", optionalAuthMiddleware, krogerTestEval);
 
 export default router;
