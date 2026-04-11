@@ -27,6 +27,14 @@ function safeShort(v, max = 500) {
   }
 }
 
+function nowMs() {
+  return Date.now();
+}
+
+function elapsedMs(start) {
+  return Date.now() - start;
+}
+
 // Redact anything that looks like an access token
 function redact(obj) {
   try {
@@ -382,7 +390,6 @@ async function callGPT5JSON(
     text: { format: textFormat, verbosity: "low" },
   };
 
-  // Ensure strict schema has required keys filled
   if (payload.text.format?.type === "json_schema") {
     const sch = payload.text.format.schema;
     const keys = Object.keys(sch?.properties || {});
@@ -401,8 +408,8 @@ async function callGPT5JSON(
     });
   }
 
+  const started = nowMs();
   const resp = await openai.responses.create(payload);
-
   const extracted = extractResponsesText(resp);
 
   if (log) {
@@ -411,11 +418,13 @@ async function callGPT5JSON(
 
     log.info("OpenAI response summary", {
       tag,
+      elapsedMs: elapsedMs(started),
       output_text_len: outTextLen,
       extracted_type: typeof extracted,
       extracted_len: typeof extracted === "string" ? extracted.length : null,
       has_output: Array.isArray(resp?.output) ? resp.output.length : null,
       resp_keys: Object.keys(resp || {}).slice(0, 20),
+      extracted_preview: typeof extracted === "string" ? safeShort(extracted, 500) : safeShort(extracted, 500),
     });
 
     if (
@@ -429,7 +438,6 @@ async function callGPT5JSON(
     }
   }
 
-  // If we got object back (c.json / c.parsed), return it directly (safeJSONParse handles objects)
   return extracted;
 }
 
@@ -503,6 +511,8 @@ async function runKrogerSearchPipeline({
   chooseMax = 2,
   log,
 }) {
+  const pipelineStart = nowMs();
+
   const sendPhase = (p) => {
     if (typeof onPhase === "function") onPhase(p);
   };
@@ -520,7 +530,14 @@ async function runKrogerSearchPipeline({
   log?.info("Kroger pipeline start", { query, zip, qNorm, fastKey });
 
   try {
+    const t0 = nowMs();
     const fast = await redis.get(fastKey);
+    log?.info("dishcache lookup finished", {
+      key: fastKey,
+      hit: Boolean(fast),
+      ms: elapsedMs(t0),
+    });
+
     if (fast) {
       const parsed = JSON.parse(fast);
       const hasIngredients = Array.isArray(parsed?.ingredients);
@@ -531,6 +548,9 @@ async function runKrogerSearchPipeline({
         log?.info("dishcache HIT", {
           ingredientsCount: parsed?.ingredients?.length || 0,
           productsCount: parsed?.products?.length || 0,
+          matchedInKroger: parsed?.matchedInKroger || [],
+          byIngredientKeys: Object.keys(parsed?.krogerMatchedByIngredient || {}),
+          totalMs: elapsedMs(pipelineStart),
         });
         sendDebug({
           where: "dishcache_hit",
@@ -574,54 +594,64 @@ Query: ${query}
   let dishName;
   let ingredients;
 
-  const cachedLLM1 = await redis.get(keyLLM1);
-  if (cachedLLM1) {
-    const arr = JSON.parse(cachedLLM1);
-    const dishDetected = Array.isArray(arr) && arr.length > 1;
-    dishName = dishDetected ? arr[0] : null;
-    ingredients = Array.isArray(arr) ? (dishDetected ? arr.slice(1) : arr) : [];
-    log?.info("LLM1 cache HIT", { keyLLM1, dishName, ingredientsCount: ingredients.length });
-    sendDebug({ where: "llm1_cache_hit", dishName, ingredients });
-  } else {
-    log?.info("LLM1 cache MISS -> calling OpenAI", { keyLLM1 });
-    const llm1Raw = await callGPT5JSON(messages1, {
-      maxTokens: 1200,
-      schema: {
-        name: "ingredients_payload",
+  {
+    const t0 = nowMs();
+    const cachedLLM1 = await redis.get(keyLLM1);
+    log?.info("LLM1 cache lookup finished", {
+      key: keyLLM1,
+      hit: Boolean(cachedLLM1),
+      ms: elapsedMs(t0),
+    });
+
+    if (cachedLLM1) {
+      const arr = JSON.parse(cachedLLM1);
+      const dishDetected = Array.isArray(arr) && arr.length > 1;
+      dishName = dishDetected ? arr[0] : null;
+      ingredients = Array.isArray(arr) ? (dishDetected ? arr.slice(1) : arr) : [];
+      log?.info("LLM1 cache HIT", { keyLLM1, dishName, ingredientsCount: ingredients.length, ingredients });
+      sendDebug({ where: "llm1_cache_hit", dishName, ingredients });
+    } else {
+      log?.info("LLM1 cache MISS -> calling OpenAI", { keyLLM1 });
+      const llm1Raw = await callGPT5JSON(messages1, {
+        maxTokens: 1200,
         schema: {
-          type: "object",
-          properties: { result: { type: "array", items: { type: "string" } } },
-          required: ["result"],
-          additionalProperties: false,
+          name: "ingredients_payload",
+          schema: {
+            type: "object",
+            properties: { result: { type: "array", items: { type: "string" } } },
+            required: ["result"],
+            additionalProperties: false,
+          },
         },
-      },
-      log,
-      tag: "LLM1_ingredients",
-    });
+        log,
+        tag: "LLM1_ingredients",
+      });
 
-    const parsed1 = safeJSONParse(llm1Raw, { result: [] });
-    const arr = Array.isArray(parsed1?.result) ? parsed1.result : [];
-    const dishDetected = arr.length > 1;
-    dishName = dishDetected ? arr[0] : null;
-    ingredients = dishDetected ? arr.slice(1) : arr;
+      const parsed1 = safeJSONParse(llm1Raw, { result: [] });
+      const arr = Array.isArray(parsed1?.result) ? parsed1.result : [];
+      const dishDetected = arr.length > 1;
+      dishName = dishDetected ? arr[0] : null;
+      ingredients = dishDetected ? arr.slice(1) : arr;
 
-    log?.info("LLM1 result", {
-      dishName,
-      ingredientsCount: ingredients.length,
-      rawPreview: safeShort(llm1Raw, 300),
-    });
-    sendDebug({ where: "llm1_result", dishName, ingredients });
+      log?.info("LLM1 result", {
+        dishName,
+        ingredientsCount: ingredients.length,
+        ingredients,
+        rawPreview: safeShort(llm1Raw, 500),
+      });
+      sendDebug({ where: "llm1_result", dishName, ingredients });
 
-    await redis.set(
-      keyLLM1,
-      JSON.stringify(dishDetected ? [dishName, ...ingredients] : ingredients),
-      "EX",
-      60 * 60 * 24 * 30
-    );
+      await redis.set(
+        keyLLM1,
+        JSON.stringify(dishDetected ? [dishName, ...ingredients] : ingredients),
+        "EX",
+        60 * 60 * 24 * 30
+      );
+    }
   }
 
   if (!ingredients?.length) {
-    log?.warn("No ingredients extracted", { query });
+    log?.warn("No ingredients extracted", { query, totalMs: elapsedMs(pipelineStart) });
     const early = {
       products: [],
       warnings: ["no_ingredients"],
@@ -643,9 +673,15 @@ Query: ${query}
 
   let locationId = null;
   try {
+    const t0 = nowMs();
     locationId =
       userDoc?.kroger?.locationId ||
       (await Kroger.getLocationIdByZip(zip || process.env.KROGER_DEFAULT_ZIP));
+    log?.info("Kroger location lookup finished", {
+      zip,
+      locationId,
+      ms: elapsedMs(t0),
+    });
   } catch (e) {
     log?.error("Failed to get Kroger locationId", {
       zip,
@@ -663,6 +699,7 @@ Query: ${query}
 
   for (const ing of ingredients) {
     try {
+      const t0 = nowMs();
       const limit = Math.max(passCount, 20);
       const list = await Kroger.searchProductsByTerm(ing, {
         locationId,
@@ -676,7 +713,8 @@ Query: ${query}
       log?.info("Kroger candidates", {
         ingredient: ing,
         candidates: titlesByIng[ing].length,
-        top3: titlesByIng[ing].slice(0, 3),
+        top10: titlesByIng[ing].slice(0, 10),
+        ms: elapsedMs(t0),
       });
 
       if ((titlesByIng[ing] || []).length === 0) {
@@ -684,7 +722,10 @@ Query: ${query}
       }
     } catch (e) {
       const payload = e?.response?.data || e?.message || String(e);
-      log?.error("Kroger search failed", { ingredient: ing, payload: safeShort(payload, 400) });
+      log?.error("Kroger search failed", {
+        ingredient: ing,
+        payload: safeShort(payload, 400),
+      });
       warnings.push({ ingredient: ing, error: "product_search_failed", payload });
       fullByIng[ing] = [];
       titlesByIng[ing] = [];
@@ -692,7 +733,12 @@ Query: ${query}
   }
 
   const ingList = ingredients.filter((i) => (titlesByIng[i] || []).length > 0);
-  log?.info("Ingredients with candidates", { ingListCount: ingList.length, total: ingredients.length });
+  log?.info("Ingredients with Kroger candidates", {
+    ingListCount: ingList.length,
+    totalIngredients: ingredients.length,
+    ingList,
+    warnings,
+  });
   sendDebug({ where: "kroger_candidates_summary", ingList, warnings });
 
   if (!ingList.length) {
@@ -728,124 +774,190 @@ Query: ${query}
   )}:fp=${fp}`;
 
   let entries;
-  const cachedLLM2 = await redis.get(keyLLM2);
-  if (cachedLLM2) {
-    const parsed2 = safeJSONParse(cachedLLM2, { final_picks: [] });
-    entries = Array.isArray(parsed2.final_picks) ? parsed2.final_picks : [];
-    log?.info("LLM2 cache HIT", { keyLLM2, picksCount: entries.length });
-    sendDebug({ where: "llm2_cache_hit", picks: entries });
-  } else {
-    log?.info("LLM2 cache MISS -> calling OpenAI", { keyLLM2 });
+  {
+    const t0 = nowMs();
+    const cachedLLM2 = await redis.get(keyLLM2);
+    log?.info("LLM2 cache lookup finished", {
+      key: keyLLM2,
+      hit: Boolean(cachedLLM2),
+      ms: elapsedMs(t0),
+    });
 
-    const messages2 = [
-      { role: "system", content: "Return ONLY raw JSON. No prose. No code fences." },
-      {
-        role: "user",
-        content: `
-For each ingredient, choose up to ${Math.max(1, Math.min(2, chooseMax))} items by returning the indices.
+    if (cachedLLM2) {
+      const parsed2 = safeJSONParse(cachedLLM2, { final_picks: [] });
+      entries = Array.isArray(parsed2.final_picks) ? parsed2.final_picks : [];
+      log?.info("LLM2 cache HIT", { keyLLM2, picksCount: entries.length, picks: entries });
+      sendDebug({ where: "llm2_cache_hit", picks: entries });
+    } else {
+      log?.info("LLM2 cache MISS -> calling OpenAI", { keyLLM2 });
 
-IMPORTANT:
-- Each ingredient MUST have at least 1 index (because these ingredients have candidates).
-- Indices must refer to the list for that ingredient.
+      const messages2 = [
+        { role: "system", content: "Return ONLY raw JSON. No prose. No code fences." },
+        {
+          role: "user",
+          content: `
+You are matching recipe ingredients to grocery retailer search results.
+
+Task:
+For each ingredient, choose up to ${Math.max(1, Math.min(2, chooseMax))} candidate items by returning their indices.
+
+Important rules:
+- Only choose an index if the product is a genuinely correct match for the ingredient.
+- If none of the candidates is a correct or confident match, return an empty list for that ingredient.
+- Do not choose vaguely related, overly broad, or clearly wrong products.
+- Prefer direct ingredient matches over flavored, prepared, mixed, substitute, or unrelated items.
+- Prefer correct direct matches.
+- Return an empty list only when the candidates are clearly not appropriate.
+- If a candidate is a reasonable grocery match for the ingredient, you may select it.
+
+Examples:
+- ingredient "soy sauce" should match soy sauce products, not coconut aminos unless clearly intended.
+- ingredient "scallion" should not match onions in general unless the candidate is specifically scallions / green onions.
+- ingredient "rice flour" should not match all-purpose flour.
 
 Output format:
-{"final_picks":[{"ingredient":"tomato","indices":[0,3]}]}
+{"final_picks":[{"ingredient":"tomato","indices":[0,3]},{"ingredient":"rice vinegar","indices":[]}]}
 
 ingredients = ${JSON.stringify(ingList)}
 candidates =
 ${JSON.stringify(enumerated, null, 2)}
         `.trim(),
-      },
-    ];
+        },
+      ];
 
-    const llm2Raw = await callGPT5JSON(messages2, {
-      maxTokens: 1200,
-      schema: {
-        name: "final_picks_schema",
+      const llm2Raw = await callGPT5JSON(messages2, {
+        maxTokens: 4000,
         schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            final_picks: {
-              type: "array",
-              minItems: ingList.length,
-              maxItems: ingList.length,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  ingredient: { type: "string", enum: ingList },
-                  indices: {
-                    type: "array",
-                    items: { type: "integer", minimum: 0 },
-                    // ✅ changed: force at least 1 pick per ingredient
-                    minItems: 1,
-                    maxItems: Math.max(1, Math.min(2, chooseMax)),
+          name: "final_picks_schema",
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              final_picks: {
+                type: "array",
+                minItems: ingList.length,
+                maxItems: ingList.length,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    ingredient: { type: "string", enum: ingList },
+                    indices: {
+                      type: "array",
+                      items: { type: "integer", minimum: 0 },
+                      minItems: 0,
+                      maxItems: Math.max(1, Math.min(2, chooseMax)),
+                    },
                   },
+                  required: ["ingredient", "indices"],
                 },
-                required: ["ingredient", "indices"],
               },
             },
+            required: ["final_picks"],
           },
-          required: ["final_picks"],
         },
-      },
-      log,
-      tag: "LLM2_kroger_match",
-    });
+        log,
+        tag: "LLM2_kroger_match",
+      });
 
-    const parsed2 = safeJSONParse(llm2Raw, { final_picks: [] });
-    entries = Array.isArray(parsed2.final_picks) ? parsed2.final_picks : [];
+      const parsed2 = safeJSONParse(llm2Raw, { final_picks: [] });
+      entries = Array.isArray(parsed2.final_picks) ? parsed2.final_picks : [];
 
-    log?.info("LLM2 result", {
-      picksCount: entries.length,
-      rawType: typeof llm2Raw,
-      rawPreview: safeShort(llm2Raw, 350),
-    });
-    if (!entries.length) {
-      log?.warn("LLM2 returned no picks - will lead to 0 products", {
-        ingListCount: ingList.length,
-        exampleCandidates: enumerated?.[ingList?.[0]]?.slice?.(0, 5) || null,
+      log?.info("LLM2 result", {
+        picksCount: entries.length,
+        picks: entries,
+        rawType: typeof llm2Raw,
         rawPreview: safeShort(llm2Raw, 800),
       });
-    }
-    sendDebug({ where: "llm2_result", picks: entries });
 
-    await redis.set(
-      keyLLM2,
-      JSON.stringify({ final_picks: entries }),
-      "EX",
-      60 * 60 * 24 * 30
-    );
+      if (!entries.length) {
+        log?.warn("LLM2 returned no picks", {
+          ingListCount: ingList.length,
+          exampleCandidates: enumerated?.[ingList?.[0]]?.slice?.(0, 10) || null,
+          rawPreview: safeShort(llm2Raw, 1000),
+        });
+      }
+
+      sendDebug({ where: "llm2_result", picks: entries });
+
+      await redis.set(
+        keyLLM2,
+        JSON.stringify({ final_picks: entries }),
+        "EX",
+        60 * 60 * 24 * 30
+      );
+    }
   }
 
   const matchedInKrogerSet = new Set();
   const krogerMatchedByIngredient = {};
   const products = [];
 
-  for (const { ingredient: ing, indices } of (entries || [])) {
+  for (const ing of ingList) {
     const pool = fullByIng[ing] || [];
     const titles = titlesByIng[ing] || [];
-    const idx = Array.from(
-      new Set((Array.isArray(indices) ? indices : []).filter(Number.isInteger))
-    );
+    const entry = (entries || []).find((e) => e?.ingredient === ing);
+    const rawIndices = Array.isArray(entry?.indices) ? entry.indices : [];
+    const idx = Array.from(new Set(rawIndices.filter(Number.isInteger)));
 
-    if (!idx.length) continue;
+    log?.info("Kroger pick evaluation start", {
+      ingredient: ing,
+      candidateCount: titles.length,
+      selectedIndices: idx,
+      selectedTitles: idx.filter((i) => i >= 0 && i < titles.length).map((i) => titles[i]),
+    });
+
+    if (!idx.length) {
+      log?.warn("No Kroger picks for ingredient", {
+        ingredient: ing,
+        candidatesTop10: titles.slice(0, 10),
+      });
+      continue;
+    }
 
     let matchedHere = 0;
+    const matchedProductsHere = [];
+
     for (const i of idx) {
-      if (i < 0 || i >= titles.length) continue;
+      if (i < 0 || i >= titles.length) {
+        log?.warn("Kroger picked invalid index", {
+          ingredient: ing,
+          index: i,
+          candidateCount: titles.length,
+        });
+        continue;
+      }
+
       const title = titles[i];
       const hit = pool.find((p) => p.description === title) || pool[i];
-      if (!hit) continue;
+
+      if (!hit) {
+        log?.warn("Kroger picked title but no product resolved", {
+          ingredient: ing,
+          index: i,
+          title,
+        });
+        continue;
+      }
 
       const norm = normalizeKroger(hit, locationId);
       products.push(norm);
       (krogerMatchedByIngredient[ing] ||= []).push(norm);
+      matchedProductsHere.push({
+        upc: norm.upc,
+        title: norm.title,
+        price: norm.price,
+      });
       matchedHere++;
     }
 
     if (matchedHere > 0) matchedInKrogerSet.add(ing);
+
+    log?.info("Kroger pick evaluation done", {
+      ingredient: ing,
+      matchedCount: matchedHere,
+      matchedProducts: matchedProductsHere,
+    });
   }
 
   const krogerCandidateCounts = Object.fromEntries(
@@ -855,8 +967,13 @@ ${JSON.stringify(enumerated, null, 2)}
   log?.info("Kroger pipeline result", {
     productsCount: products.length,
     matchedIngredientsCount: matchedInKrogerSet.size,
+    matchedIngredients: Array.from(matchedInKrogerSet),
+    byIngredientKeys: Object.keys(krogerMatchedByIngredient || {}),
     warningsCount: warnings.length,
+    warnings,
+    totalMs: elapsedMs(pipelineStart),
   });
+
   sendDebug({
     where: "kroger_pipeline_done",
     productsCount: products.length,
@@ -916,6 +1033,7 @@ async function runWalmartMatchByIndexDetailed(
   terms = [],
   { passCount = 20, chooseMax = 2, log, onDebug } = {}
 ) {
+  const walmartStart = nowMs();
   const ingList = Array.from(new Set((terms || []).filter(Boolean)));
   if (!ingList.length) {
     log?.info("Walmart skipped (no terms)");
@@ -930,13 +1048,15 @@ async function runWalmartMatchByIndexDetailed(
 
   for (const ing of ingList) {
     try {
+      const t0 = nowMs();
       const items = await walmartRawSearch(ing);
       fullByIng[ing] = items;
       titlesByIng[ing] = items.map((it) => it?.name || "").filter(Boolean).slice(0, passCount);
       log?.info("Walmart candidates", {
         ingredient: ing,
         candidates: titlesByIng[ing].length,
-        top3: titlesByIng[ing].slice(0, 3),
+        top10: titlesByIng[ing].slice(0, 10),
+        ms: elapsedMs(t0),
       });
     } catch (e) {
       log?.error("Walmart search failed", { ingredient: ing, err: e?.message || String(e) });
@@ -953,13 +1073,20 @@ async function runWalmartMatchByIndexDetailed(
     {
       role: "user",
       content: `
-For each ingredient, choose up to ${Math.max(1, Math.min(2, chooseMax))} items by returning indices.
+You are matching recipe ingredients to Walmart grocery search results.
 
-IMPORTANT:
-- Each ingredient MUST have at least 1 index (if it has candidates).
+Task:
+For each ingredient, choose up to ${Math.max(1, Math.min(2, chooseMax))} candidate items by returning their indices.
+
+Important rules:
+- Only choose indices for products that are genuinely correct matches for the ingredient.
+- If no candidate is a correct or confident match, return an empty list.
+- Do not force a match.
+- Avoid weak, broad, substitute, flavored, prepared, or unrelated products unless they clearly match the ingredient.
+- Be conservative. No match is better than an incorrect match.
 
 Output:
-{"final_picks":[{"ingredient":"x","indices":[0]}]}
+{"final_picks":[{"ingredient":"x","indices":[0]},{"ingredient":"y","indices":[]}]}
 
 ingredients = ${JSON.stringify(ingList)}
 candidates =
@@ -988,8 +1115,7 @@ ${JSON.stringify(enumerated, null, 2)}
                 indices: {
                   type: "array",
                   items: { type: "integer", minimum: 0 },
-                  // ✅ changed: force at least 1 pick
-                  minItems: 1,
+                  minItems: 0,
                   maxItems: Math.max(1, Math.min(2, chooseMax)),
                 },
               },
@@ -1006,9 +1132,13 @@ ${JSON.stringify(enumerated, null, 2)}
 
   const parsed = safeJSONParse(raw, { final_picks: [] });
   const entries = (parsed?.final_picks || []).filter((e) => e && ingList.includes(e.ingredient));
-  log?.info("Walmart LLM picks", { rawPreview: safeShort(raw, 350), picksCount: entries.length });
+  log?.info("Walmart LLM picks", {
+    rawPreview: safeShort(raw, 800),
+    picksCount: entries.length,
+    picks: entries,
+  });
   if (!entries.length) {
-    log?.warn("Walmart LLM returned no picks", { rawPreview: safeShort(raw, 900) });
+    log?.warn("Walmart LLM returned no picks", { rawPreview: safeShort(raw, 1000) });
   }
   onDebug?.({ where: "walmart_llm_picks", picks: entries });
 
@@ -1016,20 +1146,46 @@ ${JSON.stringify(enumerated, null, 2)}
   const matchedSet = new Set();
   const byIngredient = {};
 
-  for (const { ingredient: ing, indices } of entries) {
+  for (const ing of ingList) {
     const pool = fullByIng[ing] || [];
     const titles = titlesByIng[ing] || [];
+    const entry = entries.find((e) => e?.ingredient === ing);
+    const rawIndices = Array.isArray(entry?.indices) ? entry.indices : [];
     const idx = Array.from(
-      new Set((Array.isArray(indices) ? indices : []).filter(Number.isInteger))
+      new Set(rawIndices.filter(Number.isInteger))
     );
-    if (!idx.length) continue;
+
+    log?.info("Walmart pick evaluation start", {
+      ingredient: ing,
+      candidateCount: titles.length,
+      selectedIndices: idx,
+      selectedTitles: idx.filter((i) => i >= 0 && i < titles.length).map((i) => titles[i]),
+    });
+
+    if (!idx.length) {
+      log?.warn("No Walmart picks for ingredient", {
+        ingredient: ing,
+        candidatesTop10: titles.slice(0, 10),
+      });
+      continue;
+    }
 
     const chosen = [];
-    for (const i of idx) if (i >= 0 && i < titles.length) chosen.push(titles[i]);
+    for (const i of idx) {
+      if (i >= 0 && i < titles.length) chosen.push(titles[i]);
+      else {
+        log?.warn("Walmart picked invalid index", {
+          ingredient: ing,
+          index: i,
+          candidateCount: titles.length,
+        });
+      }
+    }
     if (!chosen.length) continue;
 
     const byNorm = new Map(pool.map((it) => [normTitle(it?.name || ""), it]));
     let matchedHere = 0;
+    const matchedProductsHere = [];
 
     for (const t of chosen) {
       const n = normTitle(t);
@@ -1038,11 +1194,27 @@ ${JSON.stringify(enumerated, null, 2)}
         const norm = normalizeWalmart(hit);
         out.push(norm);
         (byIngredient[ing] ||= []).push(norm);
+        matchedProductsHere.push({
+          upc: norm.upc,
+          title: norm.title,
+          price: norm.price,
+        });
         matchedHere++;
+      } else {
+        log?.warn("Walmart picked title but no product resolved", {
+          ingredient: ing,
+          title: t,
+        });
       }
     }
 
     if (matchedHere > 0) matchedSet.add(ing);
+
+    log?.info("Walmart pick evaluation done", {
+      ingredient: ing,
+      matchedCount: matchedHere,
+      matchedProducts: matchedProductsHere,
+    });
   }
 
   const walmartCandidateCounts = Object.fromEntries(
@@ -1052,6 +1224,9 @@ ${JSON.stringify(enumerated, null, 2)}
   log?.info("Walmart matching result", {
     productsCount: out.length,
     matchedIngredientsCount: matchedSet.size,
+    matchedIngredients: Array.from(matchedSet),
+    byIngredientKeys: Object.keys(byIngredient || {}),
+    totalMs: elapsedMs(walmartStart),
   });
 
   onDebug?.({
@@ -1098,8 +1273,15 @@ function buildFinalPayload(krogerResult, walmartResult, { budgetSearch, log, onD
     log?.info("Final payload (non-budget)", {
       krogerProducts: payload.krogerProducts.length,
       walmartProducts: payload.walmartProducts.length,
-      unmatchedIngredients: payload.unmatchedIngredients.length,
+      matchedInKroger: payload.matchedInKroger,
+      matchedInWalmart: payload.matchedInWalmart,
+      krogerByIngredientKeys: Object.keys(payload.krogerByIngredient || {}),
+      walmartByIngredientKeys: Object.keys(payload.walmartByIngredient || {}),
+      unmatchedIngredients: payload.unmatchedIngredients,
+      unmatchedTerms: payload.unmatchedTerms,
+      warnings: payload.warnings,
     });
+
     onDebug?.({
       where: "final_payload_non_budget",
       counts: {
@@ -1111,7 +1293,6 @@ function buildFinalPayload(krogerResult, walmartResult, { budgetSearch, log, onD
     return payload;
   }
 
-  // Budget mode comparison across retailers (per ingredient)
   const finalKrogerByIngredient = {};
   const finalWalmartByIngredient = {};
   const budgetDecisions = [];
@@ -1174,14 +1355,15 @@ function buildFinalPayload(krogerResult, walmartResult, { budgetSearch, log, onD
     walmartByIngredient: finalWalmartByIngredient,
     unmatchedTerms: extractUnmatchedTerms(k.warnings || []),
     warnings: k.warnings || [],
-    budgetDecisions, // debug-friendly
+    budgetDecisions,
   };
 
   log?.info("Final payload (budget)", {
     krogerProducts: payload.krogerProducts.length,
     walmartProducts: payload.walmartProducts.length,
-    matchedInKroger: payload.matchedInKroger.length,
-    matchedInWalmart: payload.matchedInWalmart.length,
+    matchedInKroger: payload.matchedInKroger,
+    matchedInWalmart: payload.matchedInWalmart,
+    budgetDecisionsPreview: budgetDecisions.slice(0, 10),
   });
 
   if (!payload.krogerProducts.length && !payload.walmartProducts.length) {
@@ -1510,7 +1692,6 @@ export async function krogerSearch(req, res) {
         log,
       });
 
-      // ✅ Improved non-budget walmart term fallback:
       const krogerMatchedSet = new Set(krogerResult?.matchedInKroger || []);
       const unmatchedIngredients = (krogerResult?.ingredients || []).filter((ing) => !krogerMatchedSet.has(ing));
       const fromWarnings = extractUnmatchedTerms(krogerResult?.warnings || []);
@@ -1523,6 +1704,7 @@ export async function krogerSearch(req, res) {
         budget,
         fromWarningsCount: fromWarnings.length,
         unmatchedIngredientsCount: unmatchedIngredients.length,
+        unmatchedIngredients,
         walmartTerms,
         reason: budget ? "budget_all_ingredients" : (fromWarnings.length ? "warnings_terms" : "fallback_unmatched_ingredients"),
       });
@@ -1584,7 +1766,6 @@ export async function krogerSearch(req, res) {
       log,
     });
 
-    // ✅ Improved non-budget walmart term fallback:
     const krogerMatchedSet = new Set(krogerResult?.matchedInKroger || []);
     const unmatchedIngredients = (krogerResult?.ingredients || []).filter((ing) => !krogerMatchedSet.has(ing));
     const fromWarnings = extractUnmatchedTerms(krogerResult?.warnings || []);
@@ -1594,6 +1775,7 @@ export async function krogerSearch(req, res) {
     log.info("Walmart terms decided (non-budget)", {
       fromWarningsCount: fromWarnings.length,
       unmatchedIngredientsCount: unmatchedIngredients.length,
+      unmatchedIngredients,
       walmartTerms,
       reason: fromWarnings.length ? "warnings_terms" : "fallback_unmatched_ingredients",
     });
@@ -1664,7 +1846,6 @@ export async function krogerSearchStream(req, res) {
       log,
     });
 
-    // ✅ Improved non-budget walmart term fallback:
     const krogerMatchedSet = new Set(krogerResult?.matchedInKroger || []);
     const unmatchedIngredients = (krogerResult?.ingredients || []).filter((ing) => !krogerMatchedSet.has(ing));
     const fromWarnings = extractUnmatchedTerms(krogerResult?.warnings || []);
@@ -1678,6 +1859,7 @@ export async function krogerSearchStream(req, res) {
       budget,
       fromWarningsCount: fromWarnings.length,
       unmatchedIngredientsCount: unmatchedIngredients.length,
+      unmatchedIngredients,
       walmartTerms,
       reason: budget ? "budget_all_ingredients" : (fromWarnings.length ? "warnings_terms" : "fallback_unmatched_ingredients"),
     });
@@ -1897,5 +2079,54 @@ export async function krogerCartAddStream(req, res) {
 }
 
 export async function krogerTestEval(req, res) {
-  res.json({ ok: true });
+  const requestId = crypto.randomBytes(6).toString("hex");
+  const log = mkLogger(requestId, { route: "krogerTestEval" });
+
+  try {
+    const src = req.method === "GET" ? req.query : req.body || {};
+    const query = String(src.query || "").trim();
+    const zip = src.zip ? String(src.zip).trim() : undefined;
+
+    if (!query) {
+      return res.status(400).json({ error: "query is required" });
+    }
+
+    const krogerResult = await runKrogerSearchPipeline({
+      query,
+      zip,
+      user: req.user,
+      passCount: 20,
+      chooseMax: 2,
+      onPhase: null,
+      onDebug: null,
+      log,
+    });
+
+    const krogerMatchedSet = new Set(krogerResult?.matchedInKroger || []);
+    const unmatchedIngredients = (krogerResult?.ingredients || []).filter((ing) => !krogerMatchedSet.has(ing));
+    const fromWarnings = extractUnmatchedTerms(krogerResult?.warnings || []);
+    const walmartTerms = fromWarnings.length ? fromWarnings : unmatchedIngredients.slice(0, 6);
+
+    log?.info("Test eval walmart terms", {
+      unmatchedIngredients,
+      fromWarnings,
+      walmartTerms,
+    });
+
+    const walmartResult = await runWalmartMatchByIndexDetailed(walmartTerms, {
+      passCount: 20,
+      chooseMax: 2,
+      log,
+    });
+
+    const payload = buildFinalPayload(krogerResult, walmartResult, {
+      budgetSearch: false,
+      log,
+    });
+
+    return res.json(payload);
+  } catch (e) {
+    log.error("test eval failed", { err: e?.response?.data || e?.message || e });
+    return res.status(500).json({ error: "test_eval_failed", detail: e?.message || String(e) });
+  }
 }
